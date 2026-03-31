@@ -53,8 +53,8 @@ typedef enum MB_FC
 {
     MB_FC_READ_COILS               = 1,	 /*!< FCT=1 -> read coils or digital outputs */
     MB_FC_READ_DISCRETE_INPUT      = 2,	 /*!< FCT=2 -> read digital inputs */
-    MB_FC_READ_REGISTERS           = 3,	 /*!< FCT=3 -> read registers or analog outputs */
-    MB_FC_READ_INPUT_REGISTER      = 4,	 /*!< FCT=4 -> read analog inputs */
+    MB_FC_READ_HOLDING_REGISTERS   = 3,	 /*!< FCT=3 -> read registers or analog outputs */
+    MB_FC_READ_INPUT_REGISTERS     = 4,	 /*!< FCT=4 -> read analog inputs */
     MB_FC_WRITE_COIL               = 5,	 /*!< FCT=5 -> write single coil or output */
     MB_FC_WRITE_REGISTER           = 6,	 /*!< FCT=6 -> write single register */
     MB_FC_WRITE_MULTIPLE_COILS     = 15, /*!< FCT=15 -> write multiple coils or outputs */
@@ -116,8 +116,8 @@ typedef enum ERR_LIST
 enum
 {
     EXC_FUNC_CODE = 1,
-    EXC_ADDR_RANGE = 2,
-    EXC_REGS_QUANT = 3,
+    EXC_ILLEGAL_ADDR = 2,
+    EXC_ILLEGAL_DATA = 3,
     EXC_EXECUTE = 4
 };
 
@@ -186,10 +186,12 @@ typedef struct
 	uint8_t u8Buffer[MAX_BUFFER]; //Modbus buffer for communication
 	uint8_t u8BufferSize;
 	uint8_t u8lastRec;
-	uint16_t *u16regs;
+	uint16_t *u16HoldingRegs;
+	uint16_t *u16InputRegs;
 	uint16_t u16InCnt, u16OutCnt, u16errCnt; //keep statistics of Modbus traffic
 	uint16_t u16timeOut;
-	uint16_t u16regsize;
+	uint16_t u16HoldingRegSize;
+	uint16_t u16InputRegSize;
 	uint8_t dataRX;
 	int8_t i8state;
 
@@ -212,7 +214,7 @@ typedef struct
 	modbusRingBuffer_t xBufferRX;
 	// type of hardware  TCP, USB CDC, USART
 	mb_hardware_t xTypeHW;
-
+/*
 #if ENABLE_TCP == 1
 
 	tcpclients_t newconns[NUMBERTCPCONN];
@@ -223,7 +225,7 @@ typedef struct
 	uint8_t newconnIndex;
 
 #endif
-
+*/
 }
 modbusHandler_t;
 
@@ -253,14 +255,14 @@ bool getTimeOutState(); //!<get communication watch-dog timer state
 void ModbusQuery(modbusHandler_t * modH, modbus_t telegram ); // put a query in the queue tail
 void ModbusQueryInject(modbusHandler_t * modH, modbus_t telegram); //put a query in the queue head
 void StartTaskModbusSlave(void *argument); //slave
-void StartTaskModbusMaster(void *argument); //master
+// void StartTaskModbusMaster(void *argument); //master
 uint16_t calcCRC(uint8_t *Buffer, uint8_t u8length);
-
+/*
 #if ENABLE_TCP == 1
 void ModbusCloseConn(struct netconn *conn); //close the TCP connection
 void ModbusCloseConnNull(modbusHandler_t * modH); //close the TCP connection and cleans the modbus handler
 #endif
-
+*/
 
 //Function prototypes for ModbusRingBuffer
 void RingAdd(modbusRingBuffer_t *xRingBuffer, uint8_t u8Val); // adds a byte to the ring buffer

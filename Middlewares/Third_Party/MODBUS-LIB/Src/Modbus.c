@@ -17,13 +17,13 @@
 
 #include "ModbusWriteHandler.h"
 
-
+/*
 #if ENABLE_TCP == 1
 #include "api.h"
 #include "ip4_addr.h"
 #include "netif.h"
 #endif
-
+*/
 #ifndef ENABLE_USART_DMA
 #define ENABLE_USART_DMA 0
 #endif
@@ -39,12 +39,12 @@
 
 modbusHandler_t *mHandlers[MAX_M_HANDLERS];
 
-
+/*
 ///Queue Modbus telegrams for master
 const osMessageQueueAttr_t QueueTelegram_attributes = {
        .name = "QueueModbusTelegram"
 };
-
+*/
 
 const osThreadAttr_t myTaskModbusA_attributes = {
     .name = "TaskModbusSlave",
@@ -59,7 +59,7 @@ const osThreadAttr_t myTaskModbusA_attributesTCP = {
 };
 
 
-
+/*
 //Task Modbus Master
 //osThreadId_t myTaskModbusAHandle;
 const osThreadAttr_t myTaskModbusB_attributes = {
@@ -75,7 +75,7 @@ const osThreadAttr_t myTaskModbusB_attributesTCP = {
     .stack_size = 256 * 4
 };
 
-
+*/
 
 
 //Semaphore to access the Modbus Data
@@ -89,23 +89,26 @@ uint8_t numberHandlers = 0;
 
 static void sendTxBuffer(modbusHandler_t *modH);
 static int16_t getRxBuffer(modbusHandler_t *modH);
-static uint8_t validateAnswer(modbusHandler_t *modH);
+// static uint8_t validateAnswer(modbusHandler_t *modH);
 static void buildException( uint8_t u8exception, modbusHandler_t *modH );
 static uint8_t validateRequest(modbusHandler_t * modH);
+static uint8_t validateWrite(modbusHandler_t * modH);
 static uint16_t word(uint8_t H, uint8_t l);
-static void get_FC1(modbusHandler_t *modH);
-static void get_FC3(modbusHandler_t *modH);
-static int8_t process_FC1(modbusHandler_t *modH );
+// static void get_FC1(modbusHandler_t *modH);
+// static void get_FC3(modbusHandler_t *modH);
+// static int8_t process_FC1(modbusHandler_t *modH );
 static int8_t process_FC3(modbusHandler_t *modH );
-static int8_t process_FC5( modbusHandler_t *modH);
+static int8_t process_FC4(modbusHandler_t *modH );
+// static int8_t process_FC5( modbusHandler_t *modH);
 static int8_t process_FC6(modbusHandler_t *modH );
-static int8_t process_FC15(modbusHandler_t *modH );
+// static int8_t process_FC15(modbusHandler_t *modH );
 static int8_t process_FC16(modbusHandler_t *modH);
 static void vTimerCallbackT35(TimerHandle_t *pxTimer);
-static void vTimerCallbackTimeout(TimerHandle_t *pxTimer);
+// static void vTimerCallbackTimeout(TimerHandle_t *pxTimer);
 //static int16_t getRxBuffer(modbusHandler_t *modH);
-static int8_t SendQuery(modbusHandler_t *modH ,  modbus_t telegram);
+// static int8_t SendQuery(modbusHandler_t *modH ,  modbus_t telegram);
 
+/*
 #if ENABLE_TCP ==1
 
 static bool TCPwaitConnData(modbusHandler_t *modH);
@@ -114,7 +117,7 @@ static mb_errot_t TCPconnectserver(modbusHandler_t * modH, modbus_t *telegram);
 static mb_errot_t TCPgetRxBuffer(modbusHandler_t * modH);
 
 #endif
-
+*/
 
 
 
@@ -182,13 +185,13 @@ xRingBuffer->overflow = false;
 
 const unsigned char fctsupported[] =
 {
-    MB_FC_READ_COILS,
-    MB_FC_READ_DISCRETE_INPUT,
-    MB_FC_READ_REGISTERS,
-    MB_FC_READ_INPUT_REGISTER,
-    MB_FC_WRITE_COIL,
+//    MB_FC_READ_COILS,
+//    MB_FC_READ_DISCRETE_INPUT,
+    MB_FC_READ_HOLDING_REGISTERS,
+    MB_FC_READ_INPUT_REGISTERS,
+//    MB_FC_WRITE_COIL,
     MB_FC_WRITE_REGISTER,
-    MB_FC_WRITE_MULTIPLE_COILS,
+//    MB_FC_WRITE_MULTIPLE_COILS,
     MB_FC_WRITE_MULTIPLE_REGISTERS
 };
 
@@ -214,6 +217,7 @@ void ModbusInit(modbusHandler_t * modH)
 	  if(modH->uModbusType == MB_SLAVE)
 	  {
 		  //Create Modbus task slave
+/*
 #if ENABLE_TCP == 1
 		  if( modH->xTypeHW == TCP_HW)
 		  {
@@ -223,11 +227,13 @@ void ModbusInit(modbusHandler_t * modH)
 			  modH->myTaskModbusAHandle = osThreadNew(StartTaskModbusSlave, modH, &myTaskModbusA_attributes);
 		  }
 #else
+*/
 		  modH->myTaskModbusAHandle = osThreadNew(StartTaskModbusSlave, modH, &myTaskModbusA_attributes);
-#endif
+// #endif
 
 
 	  }
+	  /*
 	  else if (modH->uModbusType == MB_MASTER)
 	  {
 		  //Create Modbus task Master  and Queue for telegrams
@@ -268,6 +274,7 @@ void ModbusInit(modbusHandler_t * modH)
 		  }
 
 	  }
+	  */
 	  else
 	  {
 		  while(1); //Error Modbus type not supported choose a valid Type
@@ -344,7 +351,7 @@ void ModbusStart(modbusHandler_t * modH)
           	HAL_GPIO_WritePin(modH->EN_Port, modH->EN_Pin, GPIO_PIN_RESET);
           }
 
-          if (modH->uModbusType == MB_SLAVE &&  modH->u16regs == NULL )
+          if (modH->uModbusType == MB_SLAVE &&  (modH->u16HoldingRegs == NULL || modH->u16InputRegs == NULL))
           {
           	while(1); //ERROR define the DATA pointer shared through Modbus
           }
@@ -464,6 +471,7 @@ void vTimerCallbackT35(TimerHandle_t *pxTimer)
 	}
 }
 
+/*
 void vTimerCallbackTimeout(TimerHandle_t *pxTimer)
 {
 	//Notify that a stream has just arrived
@@ -479,8 +487,9 @@ void vTimerCallbackTimeout(TimerHandle_t *pxTimer)
 	}
 
 }
+*/
 
-
+/*
 #if ENABLE_TCP ==1
 
 bool TCPwaitConnData(modbusHandler_t *modH)
@@ -505,7 +514,7 @@ bool TCPwaitConnData(modbusHandler_t *modH)
 
   //NULL means there is a free connection slot, so we can accept an incoming client connection
   if (clientconn->conn == NULL){
-      /* accept any incoming connection */
+      // accept any incoming connection
 	  accept_err = netconn_accept(modH->conn, &clientconn->conn);
 	  if(accept_err != ERR_OK)
 	  {
@@ -556,8 +565,8 @@ bool TCPwaitConnData(modbusHandler_t *modH)
   {
       if (netconn_err(clientconn->conn) == ERR_OK)
       {
-    	  /* Read the data from the port, blocking if nothing yet there.
-    	  We assume the request (the part we care about) is in one netbuf */
+    	  // Read the data from the port, blocking if nothing yet there.
+    	  // We assume the request (the part we care about) is in one netbuf
    	      netbuf_data(inbuf, (void**)&buf, &buflen);
 		  if (buflen>11) // minimum frame size for modbus TCP
 		  {
@@ -592,18 +601,18 @@ void  TCPinitserver(modbusHandler_t *modH)
 {
       err_t err;
 
-	  /* Create a new TCP connection handle */
+	  // Create a new TCP connection handle
 	  if(modH-> xTypeHW == TCP_HW)
 	  {
 		  modH->conn = netconn_new(NETCONN_TCP);
 		  if (modH->conn!= NULL)
 		  {
-		     /* Bind to port (502) Modbus with default IP address */
+		     // Bind to port (502) Modbus with default IP address
 			 if(modH->uTcpPort == 0) modH->uTcpPort = 502; //if port not defined
 		     err = netconn_bind(modH->conn, NULL, modH->uTcpPort);
 		     if (err == ERR_OK)
 		     {
-		    	 /* Put the connection into LISTEN state */
+		    	 // Put the connection into LISTEN state
 		    	 netconn_listen(modH->conn);
 		    	 netconn_set_recvtimeout(modH->conn, 1); // this is necessary to make it non blocking
 		     }
@@ -625,7 +634,7 @@ void  TCPinitserver(modbusHandler_t *modH)
 }
 
 #endif
-
+*/
 
 
 void StartTaskModbusSlave(void *argument)
@@ -676,8 +685,8 @@ void StartTaskModbusSlave(void *argument)
 
    if(modH->xTypeHW == USART_HW || modH->xTypeHW == USART_HW_DMA)
    {
-
-	  ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* Block until a Modbus Frame arrives */
+	  // Block until a Modbus Frame arrives
+	  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	  if (getRxBuffer(modH) == ERR_BUFF_OVERFLOW)
 	  {
@@ -718,38 +727,65 @@ void StartTaskModbusSlave(void *argument)
 #endif
 	 }
 
-	  // validate message: CRC, FCT, address and size
+    // validate message: CRC, FCT, address and size
     uint8_t u8exception = validateRequest(modH);
+
 	if (u8exception > 0)
 	{
 	    if (u8exception != ERR_TIME_OUT)
 		{
-		    buildException( u8exception, modH);
+		    buildException(u8exception, modH);
 			sendTxBuffer(modH);
 		}
 		modH->i8lastError = u8exception;
 		//return u8exception
 
 		continue;
-	 }
+	}
+
+
+	// for holding register writes, validate data values
+	// Modbus protocol allows writing any value, but this is useful for debugging
+	if ((modH->u8Buffer[FUNC] == MB_FC_WRITE_REGISTER) || (modH->u8Buffer[FUNC] == MB_FC_WRITE_MULTIPLE_REGISTERS))
+		u8exception = validateWrite(modH);
+
+	if (u8exception > 0)
+	{
+		buildException(u8exception, modH);
+		sendTxBuffer(modH);
+
+		modH->i8lastError = u8exception;
+
+		continue;
+	}
+
+
+
 
 	 modH->i8lastError = 0;
-	xSemaphoreTake(modH->ModBusSphrHandle , portMAX_DELAY); //before processing the message get the semaphore
+	 xSemaphoreTake(modH->ModBusSphrHandle , portMAX_DELAY); //before processing the message get the semaphore
 
 	 // process message
 	 switch(modH->u8Buffer[ FUNC ] )
 	 {
-		case MB_FC_READ_COILS:
+/*		case MB_FC_READ_COILS:
 		case MB_FC_READ_DISCRETE_INPUT:
+			if (modH->u8AddressMode == ADDRESS_BROADCAST)
+			{
+				// broadcast mode should ignore read function
+				break;
+			}
+			modH->i8state = process_FC1(modH);
+			break;*/
+		case MB_FC_READ_INPUT_REGISTERS:
 			if (modH->u8AddressMode == ADDRESS_BROADCAST)
 			{
 				/* broadcast mode should ignore read function */
 				break;
 			}
-			modH->i8state = process_FC1(modH);
+			modH->i8state = process_FC4(modH);
 			break;
-		case MB_FC_READ_INPUT_REGISTER:
-		case MB_FC_READ_REGISTERS :
+		case MB_FC_READ_HOLDING_REGISTERS:
 			if (modH->u8AddressMode == ADDRESS_BROADCAST)
 			{
 				/* broadcast mode should ignore read function */
@@ -757,15 +793,15 @@ void StartTaskModbusSlave(void *argument)
 			}
 			modH->i8state = process_FC3(modH);
 			break;
-		case MB_FC_WRITE_COIL:
+/*		case MB_FC_WRITE_COIL:
 			modH->i8state = process_FC5(modH);
-			break;
+			break;*/
 		case MB_FC_WRITE_REGISTER :
 			modH->i8state = process_FC6(modH);
 			break;
-		case MB_FC_WRITE_MULTIPLE_COILS:
+/*		case MB_FC_WRITE_MULTIPLE_COILS:
 			modH->i8state = process_FC15(modH);
-			break;
+			break;*/
 		case MB_FC_WRITE_MULTIPLE_REGISTERS :
 			modH->i8state = process_FC16(modH);
 			break;
@@ -783,7 +819,7 @@ void StartTaskModbusSlave(void *argument)
 }
 
 
-
+/*
 void ModbusQuery(modbusHandler_t * modH, modbus_t telegram )
 {
 	//Add the telegram to the TX tail Queue of Modbus
@@ -834,7 +870,7 @@ void ModbusCloseConnNull(modbusHandler_t * modH)
 }
 
 #endif
-
+*/
 
 /**
  * @brief
@@ -848,6 +884,7 @@ void ModbusCloseConnNull(modbusHandler_t * modH)
  * @param modbus_t  modbus telegram structure (id, fct, ...)
  * @ingroup loop
  */
+/*
 int8_t SendQuery(modbusHandler_t *modH ,  modbus_t telegram )
 {
 
@@ -951,9 +988,8 @@ int8_t SendQuery(modbusHandler_t *modH ,  modbus_t telegram )
 	modH->i8state = COM_WAITING;
 	modH->i8lastError = 0;
 	return 0;
-
-
 }
+*/
 
 #if ENABLE_TCP == 1
 
@@ -1058,6 +1094,7 @@ static mb_errot_t TCPgetRxBuffer(modbusHandler_t * modH)
 
 #endif
 
+/*
 void StartTaskModbusMaster(void *argument)
 {
 
@@ -1069,7 +1106,7 @@ void StartTaskModbusMaster(void *argument)
 
   for(;;)
   {
-	  /*Wait indefinitely for a telegram to send */
+	  // Wait indefinitely for a telegram to send
 	  xQueueReceive(modH->QueueTelegramHandle, &telegram, portMAX_DELAY);
 
 
@@ -1083,13 +1120,13 @@ void StartTaskModbusMaster(void *argument)
 
 
  	    	  SendQuery(modH, telegram);
- 		     /* Block until a Modbus Frame arrives or query timeouts*/
+ 		     // Block until a Modbus Frame arrives or query timeouts
  		      ulNotificationValue = TCPgetRxBuffer(modH); // TCP receives the data and the notification simultaneously since it is synchronous
 
  		      if (ulNotificationValue != ERR_OK) //close the TCP connection
  		      {
 
- 		    	 //ModbusCloseConn(modH->newconns[modH->newconnIndex].conn);
+ 		    	 // ModbusCloseConn(modH->newconns[modH->newconnIndex].conn);
  		    	 ModbusCloseConnNull(modH);
 
  		      }
@@ -1103,11 +1140,11 @@ void StartTaskModbusMaster(void *argument)
      else // send a query for USART and USB_CDC
      {
    	   SendQuery(modH, telegram);
-       /* Block until a Modbus Frame arrives or query timeouts*/
+       // Block until a Modbus Frame arrives or query timeouts
    	   ulNotificationValue = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
      }
 #else
-     /*Wait period of silence between modbus frame */
+     // Wait period of silence between modbus frame
 	 if(modH->port->Init.BaudRate <= 19200)
 	 	osDelay((int)(35000/modH->port->Init.BaudRate) + 2);
 	 else
@@ -1115,7 +1152,7 @@ void StartTaskModbusMaster(void *argument)
 
      // This is the case for implementations with only USART support
      SendQuery(modH, telegram);
-     /* Block indefinitely until a Modbus Frame arrives or query timeouts*/
+     // Block indefinitely until a Modbus Frame arrives or query timeouts
      ulNotificationValue = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 #endif
@@ -1175,11 +1212,11 @@ void StartTaskModbusMaster(void *argument)
 	  {
 	  case MB_FC_READ_COILS:
 	  case MB_FC_READ_DISCRETE_INPUT:
-	      //call get_FC1 to transfer the incoming message to u16regs buffer
+	      // call get_FC1 to transfer the incoming message to u16regs buffer
 	      get_FC1(modH);
 	      break;
-	  case MB_FC_READ_INPUT_REGISTER:
-	  case MB_FC_READ_REGISTERS :
+	  case MB_FC_READ_INPUT_REGISTERS:
+	  case MB_FC_READ_HOLDING_REGISTERS:
 	      // call get_FC3 to transfer the incoming message to u16regs buffer
 	      get_FC3(modH);
 	      break;
@@ -1205,6 +1242,7 @@ void StartTaskModbusMaster(void *argument)
 	 }
 
 }
+*/
 
 /**
  * This method processes functions 1 & 2 (for master)
@@ -1212,6 +1250,7 @@ void StartTaskModbusMaster(void *argument)
  *
  * @ingroup register
  */
+/*
 void get_FC1(modbusHandler_t *modH)
 {
     uint8_t u8byte, i;
@@ -1230,6 +1269,7 @@ void get_FC1(modbusHandler_t *modH)
 
      }
 }
+*/
 
 /**
  * This method processes functions 3 & 4 (for master)
@@ -1237,6 +1277,7 @@ void get_FC1(modbusHandler_t *modH)
  *
  * @ingroup register
  */
+/*
 void get_FC3(modbusHandler_t *modH)
 {
     uint8_t u8byte, i;
@@ -1248,7 +1289,7 @@ void get_FC3(modbusHandler_t *modH)
         u8byte += 2;
     }
 }
-
+*/
 
 
 /**
@@ -1258,6 +1299,7 @@ void get_FC3(modbusHandler_t *modH)
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
  */
+/*
 uint8_t validateAnswer(modbusHandler_t *modH)
 {
     // check message crc vs calculated crc
@@ -1304,6 +1346,7 @@ uint8_t validateAnswer(modbusHandler_t *modH)
 
     return 0; // OK, no exception code thrown
 }
+*/
 
 
 /**
@@ -1409,7 +1452,7 @@ uint8_t validateRequest(modbusHandler_t *modH)
 	    //uint8_t u8regs;
 	    switch ( modH->u8Buffer[ FUNC ] )
 	    {
-	    case MB_FC_READ_COILS:
+/*	    case MB_FC_READ_COILS:
 	    case MB_FC_READ_DISCRETE_INPUT:
 	    case MB_FC_WRITE_MULTIPLE_COILS:
 	    	u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]) / 16;
@@ -1430,27 +1473,75 @@ uint8_t validateRequest(modbusHandler_t *modH)
 	    	u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]) / 16;
 	    	if(word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]) % 16) u16AdRegs++;	// check for incomplete words
 	        if (u16AdRegs > modH->u16regsize) return EXC_ADDR_RANGE;
-	        break;
-	    case MB_FC_WRITE_REGISTER :
+	        break;*/
+	    case MB_FC_WRITE_REGISTER:
 	    	u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
-	        if (u16AdRegs > modH-> u16regsize) return EXC_ADDR_RANGE;
+	        if (u16AdRegs >= modH-> u16HoldingRegSize) return EXC_ILLEGAL_ADDR;
 	        break;
-	    case MB_FC_READ_REGISTERS :
-	    case MB_FC_READ_INPUT_REGISTER :
-	    case MB_FC_WRITE_MULTIPLE_REGISTERS :
+
+	    case MB_FC_READ_INPUT_REGISTERS:
 	    	u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
 	        u16NRegs = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ]);
-	        if (( u16AdRegs + u16NRegs ) > modH->u16regsize) return EXC_ADDR_RANGE;
+	        if ((u16AdRegs + u16NRegs) > modH->u16InputRegSize) return EXC_ILLEGAL_ADDR;
 
 	        //verify answer frame size in bytes
 	        u16NRegs = u16NRegs*2 + 5; // adding the header  and CRC
-	        if ( u16NRegs > 256 ) return EXC_REGS_QUANT;
+	        if ( u16NRegs > 256 ) return EXC_ILLEGAL_DATA;
+	        break;
+	    case MB_FC_READ_HOLDING_REGISTERS:
+	    case MB_FC_WRITE_MULTIPLE_REGISTERS :
+	    	u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
+	        u16NRegs = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ]);
+	        if ((u16AdRegs + u16NRegs) > modH->u16HoldingRegSize) return EXC_ILLEGAL_ADDR;
+
+	        //verify answer frame size in bytes
+	        u16NRegs = u16NRegs*2 + 5; // adding the header  and CRC
+	        if ( u16NRegs > 256 ) return EXC_ILLEGAL_DATA;
 	        break;
 	    }
 	    return 0; // OK, no exception code thrown
 
 }
 
+
+/**
+ * @brief
+ * This method validates slave incoming data written to holding registers
+ *
+ * @return 0 if OK, EXCEPTION if anything fails
+ * @ingroup modH Modbus handler
+ */
+uint8_t validateWrite(modbusHandler_t *modH)
+{
+	bool valid = true;
+	    // check start address & nb range
+	    // uint16_t u16AdRegs = 0;
+	    // uint16_t u16NRegs = 0;
+
+	//uint8_t u8regs;
+	switch ( modH->u8Buffer[ FUNC ] )
+	{
+		case MB_FC_WRITE_REGISTER:
+			/*u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
+			if (u16AdRegs >= modH-> u16HoldingRegSize) return EXC_ADDR_RANGE;*/
+			valid = false;
+			break;
+
+		case MB_FC_WRITE_MULTIPLE_REGISTERS:
+			/*u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
+			u16NRegs = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ]);
+			if ((u16AdRegs + u16NRegs) > modH->u16HoldingRegSize) return EXC_ADDR_RANGE;
+
+			//verify answer frame size in bytes
+			u16NRegs = u16NRegs*2 + 5; // adding the header  and CRC
+			if ( u16NRegs > 256 ) return EXC_REGS_QUANT;*/
+			break;
+	}
+
+	if (!valid) return EXC_ILLEGAL_DATA;
+
+	return 0; // OK, no exception code thrown
+}
 /**
  * @brief
  * This method creates a word from 2 bytes
@@ -1705,6 +1796,7 @@ if(modH->xTypeHW != TCP_HW)
  * @return u8BufferSize Response to master length
  * @ingroup discrete
  */
+/*
 int8_t process_FC1(modbusHandler_t *modH )
 {
     uint16_t u16currentRegister;
@@ -1751,11 +1843,11 @@ int8_t process_FC1(modbusHandler_t *modH )
     sendTxBuffer(modH);
     return u8CopyBufferSize;
 }
-
+*/
 
 /**
  * @brief
- * This method processes functions 3 & 4
+ * This method processes function 3 (Holding Regs)
  * This method reads a word array and transfers it to the master
  *
  * @return u8BufferSize Response to master length
@@ -1774,9 +1866,41 @@ int8_t process_FC3(modbusHandler_t *modH)
 
     for (i = u16StartAdd; i < u16StartAdd + u8regsno; i++)
     {
-    	modH->u8Buffer[ modH->u8BufferSize ] = highByte(modH->u16regs[i]);
+    	modH->u8Buffer[ modH->u8BufferSize ] = highByte(modH->u16HoldingRegs[i]);
     	modH->u8BufferSize++;
-    	modH->u8Buffer[ modH->u8BufferSize ] = lowByte(modH->u16regs[i]);
+    	modH->u8Buffer[ modH->u8BufferSize ] = lowByte(modH->u16HoldingRegs[i]);
+    	modH->u8BufferSize++;
+    }
+    u8CopyBufferSize = modH->u8BufferSize +2;
+    sendTxBuffer(modH);
+
+    return u8CopyBufferSize;
+}
+
+/**
+ * @brief
+ * This method processes function 4 (Input Regs)
+ * This method reads a word array and transfers it to the master
+ *
+ * @return u8BufferSize Response to master length
+ * @ingroup register
+ */
+int8_t process_FC4(modbusHandler_t *modH)
+{
+
+    uint16_t u16StartAdd = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ] );
+    uint8_t u8regsno = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ] );
+    uint8_t u8CopyBufferSize;
+    uint16_t i;
+
+    modH->u8Buffer[ 2 ]       = u8regsno * 2;
+    modH->u8BufferSize         = 3;
+
+    for (i = u16StartAdd; i < u16StartAdd + u8regsno; i++)
+    {
+    	modH->u8Buffer[ modH->u8BufferSize ] = highByte(modH->u16InputRegs[i]);
+    	modH->u8BufferSize++;
+    	modH->u8Buffer[ modH->u8BufferSize ] = lowByte(modH->u16InputRegs[i]);
     	modH->u8BufferSize++;
     }
     u8CopyBufferSize = modH->u8BufferSize +2;
@@ -1793,6 +1917,7 @@ int8_t process_FC3(modbusHandler_t *modH)
  * @return u8BufferSize Response to master length
  * @ingroup discrete
  */
+/*
 int8_t process_FC5( modbusHandler_t *modH )
 {
     uint8_t u8currentBit;
@@ -1818,6 +1943,7 @@ int8_t process_FC5( modbusHandler_t *modH )
 
     return u8CopyBufferSize;
 }
+*/
 
 /**
  * @brief
@@ -1834,7 +1960,7 @@ int8_t process_FC6(modbusHandler_t *modH )
     uint8_t u8CopyBufferSize;
     uint16_t u16val = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ] );
 
-    modH->u16regs[ u16add ] = u16val;
+    modH->u16HoldingRegs[ u16add ] = u16val;
 
     // keep the same header
     modH->u8BufferSize = RESPONSE_SIZE;
@@ -1855,6 +1981,7 @@ int8_t process_FC6(modbusHandler_t *modH )
  * @return u8BufferSize Response to master length
  * @ingroup discrete
  */
+/*
 int8_t process_FC15( modbusHandler_t *modH )
 {
     uint8_t u8currentBit, u8frameByte, u8bitsno;
@@ -1903,6 +2030,7 @@ int8_t process_FC15( modbusHandler_t *modH )
     sendTxBuffer(modH);
     return u8CopyBufferSize;
 }
+*/
 
 /**
  * @brief
@@ -1932,7 +2060,7 @@ int8_t process_FC16(modbusHandler_t *modH )
         		modH->u8Buffer[ (BYTE_CNT + 1) + i * 2 ],
 				modH->u8Buffer[ (BYTE_CNT + 2) + i * 2 ]);
 
-        modH->u16regs[ u16StartAdd + i ] = temp;
+        modH->u16HoldingRegs[ u16StartAdd + i ] = temp;
     }
     u8CopyBufferSize = modH->u8BufferSize +2;
     sendTxBuffer(modH);

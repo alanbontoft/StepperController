@@ -52,7 +52,8 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 modbusHandler_t ModbusH;
-uint16_t ModbusDATA[8] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000 };
+uint16_t HoldingRegs[8] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000 };
+uint16_t InputRegs[6] = { 100, 200, 300, 400, 500, 600 };
 uint16_t counter = 0;
 /* USER CODE END PV */
 
@@ -108,8 +109,10 @@ int main(void)
   ModbusH.u8id = 1;
   ModbusH.u16timeOut = 1000;
   ModbusH.EN_Port = NULL;
-  ModbusH.u16regs = ModbusDATA;
-  ModbusH.u16regsize= sizeof(ModbusDATA)/sizeof(ModbusDATA[0]);
+  ModbusH.u16HoldingRegs = HoldingRegs;
+  ModbusH.u16HoldingRegSize= sizeof(HoldingRegs)/sizeof(HoldingRegs[0]);
+  ModbusH.u16InputRegs = InputRegs;
+  ModbusH.u16InputRegSize= sizeof(InputRegs)/sizeof(InputRegs[0]);
   ModbusH.xTypeHW = USART_HW;
   //Initialize Modbus library
   ModbusInit(&ModbusH);
@@ -327,7 +330,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  ModbusDATA[0] = counter++;
+	  InputRegs[0] = counter++;
 	  osDelay(500);
   }
   /* USER CODE END 5 */
