@@ -17,6 +17,7 @@
 
 #include "ModbusWriteHandler.h"
 
+
 /*
 #if ENABLE_TCP == 1
 #include "api.h"
@@ -92,8 +93,7 @@ static int16_t getRxBuffer(modbusHandler_t *modH);
 // static uint8_t validateAnswer(modbusHandler_t *modH);
 static void buildException( uint8_t u8exception, modbusHandler_t *modH );
 static uint8_t validateRequest(modbusHandler_t * modH);
-static uint8_t validateWrite(modbusHandler_t * modH);
-static uint16_t word(uint8_t H, uint8_t l);
+// static uint16_t word(uint8_t H, uint8_t l);
 // static void get_FC1(modbusHandler_t *modH);
 // static void get_FC3(modbusHandler_t *modH);
 // static int8_t process_FC1(modbusHandler_t *modH );
@@ -1503,53 +1503,6 @@ uint8_t validateRequest(modbusHandler_t *modH)
 
 }
 
-
-/**
- * @brief
- * This method validates slave incoming data written to holding registers
- *
- * @return 0 if OK, EXCEPTION if anything fails
- * @ingroup modH Modbus handler
- */
-uint8_t validateWrite(modbusHandler_t *modH)
-{
-	bool valid = true;
-	    // check start address & nb range
-	    // uint16_t u16AdRegs = 0;
-	    // uint16_t u16NRegs = 0;
-
-	//uint8_t u8regs;
-	switch ( modH->u8Buffer[ FUNC ] )
-	{
-		case MB_FC_WRITE_REGISTER:
-			/*u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
-			if (u16AdRegs >= modH-> u16HoldingRegSize) return EXC_ADDR_RANGE;*/
-			valid = false;
-			break;
-
-		case MB_FC_WRITE_MULTIPLE_REGISTERS:
-			/*u16AdRegs = word( modH->u8Buffer[ ADD_HI ], modH->u8Buffer[ ADD_LO ]);
-			u16NRegs = word( modH->u8Buffer[ NB_HI ], modH->u8Buffer[ NB_LO ]);
-			if ((u16AdRegs + u16NRegs) > modH->u16HoldingRegSize) return EXC_ADDR_RANGE;
-
-			//verify answer frame size in bytes
-			u16NRegs = u16NRegs*2 + 5; // adding the header  and CRC
-			if ( u16NRegs > 256 ) return EXC_REGS_QUANT;*/
-			break;
-	}
-
-	if (!valid) return EXC_ILLEGAL_DATA;
-
-	return 0; // OK, no exception code thrown
-}
-/**
- * @brief
- * This method creates a word from 2 bytes
- *
- * @return uint16_t (word)
- * @ingroup H  Most significant byte
- * @ingroup L  Less significant byte
- */
 uint16_t word(uint8_t H, uint8_t L)
 {
 	bytesFields W;

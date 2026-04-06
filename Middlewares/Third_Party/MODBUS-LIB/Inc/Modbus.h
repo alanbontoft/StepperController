@@ -51,13 +51,13 @@ typedef enum
  */
 typedef enum MB_FC
 {
-    MB_FC_READ_COILS               = 1,	 /*!< FCT=1 -> read coils or digital outputs */
-    MB_FC_READ_DISCRETE_INPUT      = 2,	 /*!< FCT=2 -> read digital inputs */
+//    MB_FC_READ_COILS               = 1,	 /*!< FCT=1 -> read coils or digital outputs */
+//    MB_FC_READ_DISCRETE_INPUT      = 2,	 /*!< FCT=2 -> read digital inputs */
     MB_FC_READ_HOLDING_REGISTERS   = 3,	 /*!< FCT=3 -> read registers or analog outputs */
     MB_FC_READ_INPUT_REGISTERS     = 4,	 /*!< FCT=4 -> read analog inputs */
-    MB_FC_WRITE_COIL               = 5,	 /*!< FCT=5 -> write single coil or output */
+//    MB_FC_WRITE_COIL               = 5,	 /*!< FCT=5 -> write single coil or output */
     MB_FC_WRITE_REGISTER           = 6,	 /*!< FCT=6 -> write single register */
-    MB_FC_WRITE_MULTIPLE_COILS     = 15, /*!< FCT=15 -> write multiple coils or outputs */
+//     MB_FC_WRITE_MULTIPLE_COILS     = 15, /*!< FCT=15 -> write multiple coils or outputs */
     MB_FC_WRITE_MULTIPLE_REGISTERS = 16	 /*!< FCT=16 -> write multiple registers */
 }mb_functioncode_t;
 
@@ -273,7 +273,7 @@ void RingClear(modbusRingBuffer_t *xRingBuffer); // flushes the ring buffer
 
 extern uint8_t numberHandlers; //global variable to maintain the number of concurrent handlers
 
-
+uint16_t word(uint8_t H, uint8_t L);
 
 
 /* prototypes of the original library not implemented

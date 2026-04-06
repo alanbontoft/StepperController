@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "modbus.h"
+#include "globals.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,9 +53,11 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 modbusHandler_t ModbusH;
-uint16_t HoldingRegs[8] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000 };
-uint16_t InputRegs[6] = { 100, 200, 300, 400, 500, 600 };
-uint16_t counter = 0;
+uint16_t HoldingRegs[HR_SIZE] = { APP_FC_NOP, 0x0000, 0x0000, DIR_CW, SPEED_1, 0x0000, STEP_1 };
+uint16_t InputRegs[IR_SIZE] = { 100, 200, 300, 400 };
+uint16_t pulsecount = 0;
+uint16_t requiredpulses = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -314,7 +317,78 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void setStepSize()
+{
+	switch(HoldingRegs[HR_STEP_SIZE])
+	{
+		case STEP_1:
+			HAL_GPIO_WritePin(GPIOA, MS1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, MS2_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, MS3_Pin, GPIO_PIN_RESET);
+			break;
+		case STEP_1_2:
+			HAL_GPIO_WritePin(GPIOA, MS1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS2_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, MS3_Pin, GPIO_PIN_RESET);
+			break;
+		case STEP_1_4:
+			HAL_GPIO_WritePin(GPIOA, MS1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, MS2_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS3_Pin, GPIO_PIN_RESET);
+			break;
+		case STEP_1_8:
+			HAL_GPIO_WritePin(GPIOA, MS1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS2_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS3_Pin, GPIO_PIN_RESET);
+			break;
+		case STEP_1_16:
+			HAL_GPIO_WritePin(GPIOA, MS1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS2_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MS3_Pin, GPIO_PIN_SET);
+			break;
+	}
 
+}
+
+// calculate the number of pulses required to rotate through the requested angle
+void calculatePulses()
+{
+	float angle, pulses;
+	uint8_t factor;
+	uint16_t pulses_per_rev;
+
+	switch(HoldingRegs[HR_STEP_SIZE])
+	{
+		case STEP_1:
+			factor = 1;
+			break;
+		case STEP_1_2:
+			factor = 2;
+			break;
+		case STEP_1_4:
+			factor = 4;
+			break;
+		case STEP_1_8:
+			factor = 8;
+			break;
+		case STEP_1_16:
+			factor = 16;
+			break;
+	}
+
+	pulses_per_rev = STEPS_PER_REV * factor;
+
+	angle = *((float*)&HoldingRegs[HR_ANGLE_LO]);
+
+	pulses =  (angle / 360.0) * pulses_per_rev;
+
+	requiredpulses = round(pulses);
+}
+
+void rotate()
+{
+
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -330,7 +404,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  InputRegs[0] = counter++;
+	  // InputRegs[0] = counter++;
 	  osDelay(500);
   }
   /* USER CODE END 5 */
