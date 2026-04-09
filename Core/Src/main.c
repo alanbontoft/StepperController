@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "modbus.h"
 #include "globals.h"
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +43,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim1;
+
 UART_HandleTypeDef huart2;
 
 /* Definitions for defaultTask */
@@ -53,17 +56,18 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 modbusHandler_t ModbusH;
-uint16_t HoldingRegs[HR_SIZE] = { APP_FC_NOP, 0x0000, 0x0000, DIR_CW, SPEED_1, 0x0000, STEP_1 };
+uint16_t HoldingRegs[HR_SIZE] = { APP_FC_NOP, 0x0000, 0x0000, SPEED_1, 0x0000, STEP_1 };
 uint16_t InputRegs[IR_SIZE] = { 100, 200, 300, 400 };
-uint16_t pulsecount = 0;
-uint16_t requiredpulses = 0;
-
+uint16_t pulses_remaining;
+uint16_t pulse_width;
+int32_t dir_pulses;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -105,6 +109,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   /* Slave initialization */
   ModbusH.uModbusType = MB_SLAVE;
@@ -231,6 +236,85 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 3200 - 1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.Break2State = TIM_BREAK2_DISABLE;
+  sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
+  sBreakDeadTimeConfig.Break2Filter = 0;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -283,13 +367,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, EN1_Pin|RST1_Pin|STEP1_Pin|DIR1_Pin
-                          |EN2_Pin|RST2_Pin|STEP2_Pin|DIR2_Pin
+  HAL_GPIO_WritePin(GPIOA, EN1_Pin|RST1_Pin|EN2_Pin|RST2_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, STEP1_Pin|DIR1_Pin|STEP2_Pin|DIR2_Pin
                           |MS1_Pin|MS2_Pin|MS3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, EN3_Pin|RST3_Pin|LD3_Pin|STEP3_Pin
-                          |DIR3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, EN3_Pin|RST3_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, LD3_Pin|STEP3_Pin|DIR3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : EN1_Pin RST1_Pin STEP1_Pin DIR1_Pin
                            EN2_Pin RST2_Pin STEP2_Pin DIR2_Pin
@@ -351,6 +439,7 @@ void setStepSize()
 }
 
 // calculate the number of pulses required to rotate through the requested angle
+// positive value is CW, negative CCW
 void calculatePulses()
 {
 	float angle, pulses;
@@ -380,14 +469,124 @@ void calculatePulses()
 
 	angle = *((float*)&HoldingRegs[HR_ANGLE_LO]);
 
-	pulses =  (angle / 360.0) * pulses_per_rev;
+	pulses =  (angle / 360.0F) * pulses_per_rev;
 
-	requiredpulses = round(pulses);
+	dir_pulses = (int32_t)round(pulses);
+}
+
+void startTimer(uint16_t numpulses)
+{
+	// set number of pulses
+	pulses_remaining = 2 * numpulses;
+
+	// set starting CCR value
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pulse_width - 1);
+
+	// reset counter
+	__HAL_TIM_SET_COUNTER(&htim1, 0);
+
+	// start interrupt
+	HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
+}
+
+void enableDriver(bool enable)
+{
+
+	GPIO_PinState PinState;
+
+	PinState = enable ? GPIO_PIN_RESET : GPIO_PIN_SET;
+
+	switch(HoldingRegs[HR_CHANNEL])
+	{
+		case 0: HAL_GPIO_WritePin(GPIOA, EN1_Pin, PinState);
+		break;
+
+		case 1: HAL_GPIO_WritePin(GPIOA, EN2_Pin, PinState);
+		break;
+
+		case 2: HAL_GPIO_WritePin(GPIOB, EN3_Pin, PinState);
+		break;
+	}
+}
+
+void setDirection(bool clockwise)
+{
+
+	GPIO_PinState PinState;
+
+	PinState = clockwise ? GPIO_PIN_RESET : GPIO_PIN_SET;
+
+	switch(HoldingRegs[HR_CHANNEL])
+	{
+		case 0: HAL_GPIO_WritePin(GPIOA, DIR1_Pin, PinState);
+		break;
+
+		case 1: HAL_GPIO_WritePin(GPIOA, DIR2_Pin, PinState);
+		break;
+
+		case 2: HAL_GPIO_WritePin(GPIOB, DIR3_Pin, PinState);
+		break;
+	}
 }
 
 void rotate()
 {
+	// int32_t pulses;
+	// calculate pulses required
+	calculatePulses();
 
+	if (dir_pulses == 0) return;
+
+	// set direction pin (+ve = CW)
+	setDirection(dir_pulses > 0);
+
+	// enable driver output
+	enableDriver(true);
+
+	// calculate required pulse width based on speed and angle
+	// minimum width of pulse is 100 us (mark/space equal, therefore 200 us per cycle)
+	pulse_width = 10;
+
+	// start timer
+	startTimer(abs(dir_pulses));
+}
+
+
+
+
+
+void HAL_TIM_OC_DelayElapsedCallback (TIM_HandleTypeDef * htim)
+{
+	if (htim == &htim1)
+	{
+		switch(HoldingRegs[HR_CHANNEL])
+		{
+			case 0: HAL_GPIO_TogglePin(GPIOA, STEP1_Pin);
+			break;
+
+			case 1: HAL_GPIO_TogglePin(GPIOA, STEP2_Pin);
+			break;
+
+			case 2: HAL_GPIO_TogglePin(GPIOB, STEP3_Pin);
+			break;
+		}
+
+		// decrement pulse count
+		pulses_remaining--;
+
+		if (pulses_remaining == 0)
+		{
+			// stop timer, disable interrupt
+			HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
+			// disable driver output
+			enableDriver(false);
+			return;
+		}
+
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1,
+			__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) + pulse_width);
+
+	}
 }
 /* USER CODE END 4 */
 
@@ -404,7 +603,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  // InputRegs[0] = counter++;
+	  HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 	  osDelay(500);
   }
   /* USER CODE END 5 */
@@ -412,7 +611,7 @@ void StartDefaultTask(void *argument)
 
 /**
   * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM16 interrupt took place, inside
+  * @note   This function is called  when TIM7 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
   * @param  htim : TIM handle
@@ -423,7 +622,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM16)
+  if (htim->Instance == TIM7)
   {
     HAL_IncTick();
   }

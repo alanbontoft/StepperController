@@ -12,7 +12,7 @@
 
 #define NUM_CHANNELS 3
 
-#define HR_SIZE	7
+#define HR_SIZE	6
 #define IR_SIZE	4
 
 typedef enum
@@ -45,18 +45,20 @@ typedef enum
 	SPEED_4
 } speed_t;
 
+/*
 typedef enum
 {
 	DIR_CW,
 	DIR_CCW
 } direction_t;
+*/
 
 typedef enum
 {
 	HR_FUNCTION,
 	HR_ANGLE_LO,
 	HR_ANGLE_HI,
-	HR_DIR,
+	// HR_DIR,
 	HR_SPEED,
 	HR_CHANNEL,
 	HR_STEP_SIZE

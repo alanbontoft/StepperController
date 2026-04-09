@@ -12,7 +12,7 @@ void handleRegisterWrite(uint16_t address)
 		switch(HoldingRegs[HR_FUNCTION])
 		{
 			case APP_FC_ROTATE:
-				calculatePulses();
+				rotate();
 				break;
 			case APP_FC_SET_STEP:
 				setStepSize();
@@ -52,9 +52,10 @@ uint8_t validateWrite(modbusHandler_t *modH)
 				case HR_FUNCTION:
 					valid = (u16Value <= APP_FC_SET_STEP);
 					break;
+				/*
 				case HR_DIR:
 					valid = (u16Value <= DIR_CCW);
-					break;
+					break;*/
 				case HR_SPEED:
 					valid = (u16Value <= SPEED_4);
 					break;

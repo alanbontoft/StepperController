@@ -54,7 +54,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 void setStepSize();
-void calculatePulses();
+void rotate();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
