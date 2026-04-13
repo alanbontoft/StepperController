@@ -61,6 +61,13 @@ uint16_t InputRegs[IR_SIZE] = { 100, 200, 300, 400 };
 uint16_t pulses_remaining;
 uint16_t pulse_width;
 int32_t dir_pulses;
+
+osThreadId_t pulseTaskHandle;
+const osThreadAttr_t pulseTask_attributes = {
+  .name = "pulseTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,7 +78,7 @@ static void MX_TIM1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+void StartPulseTask(void *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -489,6 +496,15 @@ void startTimer(uint16_t numpulses)
 	HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
 }
 
+void startPulseTask(uint16_t numpulses)
+{
+	// set number of pulses
+	pulses_remaining = 2 * numpulses;
+
+	// create and start task
+	pulseTaskHandle = osThreadNew(StartPulseTask, NULL, &pulseTask_attributes);
+}
+
 void enableDriver(bool enable)
 {
 
@@ -540,15 +556,22 @@ void rotate()
 	// set direction pin (+ve = CW)
 	setDirection(dir_pulses > 0);
 
+	// set step size
+	setStepSize();
+
 	// enable driver output
 	enableDriver(true);
 
 	// calculate required pulse width based on speed and angle
 	// minimum width of pulse is 1ms (mark/space equal, therefore 2 ms per cycle)
-	pulse_width = 1;
+	pulse_width = 2;
 
 	// start timer
-	startTimer(abs(dir_pulses));
+	// startTimer(abs(dir_pulses));
+
+	// start pulse task
+	 startPulseTask(abs(dir_pulses));
+
 }
 
 
@@ -579,7 +602,7 @@ void HAL_TIM_OC_DelayElapsedCallback (TIM_HandleTypeDef * htim)
 			// stop timer, disable interrupt
 			HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
 			// disable driver output
-			// enableDriver(false);
+			enableDriver(false);
 			return;
 		}
 
@@ -588,6 +611,32 @@ void HAL_TIM_OC_DelayElapsedCallback (TIM_HandleTypeDef * htim)
 
 	}
 }
+
+void StartPulseTask(void *argument)
+{
+	while (pulses_remaining > 0)
+	{
+		switch(HoldingRegs[HR_CHANNEL])
+		{
+			case 0: HAL_GPIO_TogglePin(GPIOA, STEP1_Pin);
+			break;
+
+			case 1: HAL_GPIO_TogglePin(GPIOA, STEP2_Pin);
+			break;
+
+			case 2: HAL_GPIO_TogglePin(GPIOB, STEP3_Pin);
+			break;
+		}
+
+		pulses_remaining--;
+
+		osDelay(1);
+	}
+
+	osThreadExit();
+}
+
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
