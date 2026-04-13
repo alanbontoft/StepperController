@@ -118,7 +118,8 @@ enum
     EXC_FUNC_CODE = 1,
     EXC_ILLEGAL_ADDR = 2,
     EXC_ILLEGAL_DATA = 3,
-    EXC_EXECUTE = 4
+    EXC_EXECUTE = 4,
+	EXC_SLAVE_BUSY = 6
 };
 
 typedef union {

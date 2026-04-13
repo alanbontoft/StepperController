@@ -68,6 +68,8 @@ const osThreadAttr_t pulseTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+
+bool busy = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -547,7 +549,9 @@ void setDirection(bool clockwise)
 
 void rotate()
 {
-	// int32_t pulses;
+	// set busy flag
+	busy = true;
+
 	// calculate pulses required
 	calculatePulses();
 
@@ -564,7 +568,7 @@ void rotate()
 
 	// calculate required pulse width based on speed and angle
 	// minimum width of pulse is 1ms (mark/space equal, therefore 2 ms per cycle)
-	pulse_width = 2;
+	pulse_width = 1;
 
 	// start timer
 	// startTimer(abs(dir_pulses));
@@ -636,6 +640,9 @@ void StartPulseTask(void *argument)
 	// disabling the driver after rotation seems like the right thing to do
 	// however, these seems to lead to slight overshoot at faster speeds
 	// enableDriver(false);
+
+	// reset busy flag
+	busy = false;
 
 	osThreadExit();
 }

@@ -40,6 +40,9 @@
 
 modbusHandler_t *mHandlers[MAX_M_HANDLERS];
 
+extern uint16_t HoldingRegs[];
+extern bool busy;
+
 /*
 ///Queue Modbus telegrams for master
 const osMessageQueueAttr_t QueueTelegram_attributes = {
@@ -752,6 +755,16 @@ void StartTaskModbusSlave(void *argument)
 	if (u8exception > 0)
 	{
 		buildException(u8exception, modH);
+		sendTxBuffer(modH);
+
+		modH->i8lastError = u8exception;
+
+		continue;
+	}
+
+	if ((modH->u8Buffer[FUNC] == MB_FC_WRITE_REGISTER) && (HoldingRegs[HR_FUNCTION] == APP_FC_ROTATE) && busy)
+	{
+		buildException(EXC_SLAVE_BUSY, modH);
 		sendTxBuffer(modH);
 
 		modH->i8lastError = u8exception;
