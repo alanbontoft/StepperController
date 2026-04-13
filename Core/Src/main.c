@@ -633,6 +633,10 @@ void StartPulseTask(void *argument)
 		osDelay(1);
 	}
 
+	// disabling the driver after rotation seems like the right thing to do
+	// however, these seems to lead to slight overshoot at faster speeds
+	// enableDriver(false);
+
 	osThreadExit();
 }
 

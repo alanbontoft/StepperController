@@ -19,7 +19,8 @@ typedef enum
 {
     APP_FC_NOP,
 	APP_FC_ROTATE,
-	APP_FC_SET_STEP
+	APP_FC_SET_STEP,
+	APP_FC_ENABLE_DRIVER
 } app_functioncode_t;
 
 typedef enum
@@ -58,7 +59,6 @@ typedef enum
 	HR_FUNCTION,
 	HR_ANGLE_LO,
 	HR_ANGLE_HI,
-	// HR_DIR,
 	HR_SPEED,
 	HR_CHANNEL,
 	HR_STEP_SIZE

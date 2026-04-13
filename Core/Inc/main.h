@@ -33,7 +33,7 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include <math.h>
 /* USER CODE END Includes */
-
+#include <stdbool.h>
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
@@ -55,6 +55,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 void setStepSize();
 void rotate();
+void enableDriver(bool enable);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
